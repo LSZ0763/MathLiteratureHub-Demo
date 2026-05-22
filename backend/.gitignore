@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Environment variables & secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Database
+data/
+*.db
+*.sqlite3
+instance/
+
+# Testing & coverage
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Build artifacts
+*.egg-info/
+dist/
+build/
+wheels/
+
+# Logs
+*.log
+logs/
