@@ -14,10 +14,11 @@ async function fetchJSON(path, options = {}) {
 
 export const api = {
   health: () => fetchJSON("/health"),
-  search: (payload) =>
+  search: (payload, signal) =>
     fetchJSON("/search/", {
       method: "POST",
       body: JSON.stringify(payload),
+      signal,
     }),
   filterPapers: (payload) =>
     fetchJSON("/filter/", {

@@ -96,7 +96,7 @@ export default function CitationGraph({ papers, selectedPaper, onSelectPaper }) 
 
   return (
     <div className="w-full h-full">
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full" preserveAspectRatio="xMidYMid meet">
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full" preserveAspectRatio="xMidYMin meet">
         {/* Grid lines */}
         {yTicks.map((t, i) => (
           <line key={`yh-${i}`}

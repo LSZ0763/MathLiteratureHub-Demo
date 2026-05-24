@@ -18,7 +18,7 @@ function App() {
           </div>
         </div>
       </nav>
-      <main className="flex-1 min-h-0 max-w-7xl mx-auto w-full px-4 py-4">
+      <main className="flex-1 min-h-0 max-w-7xl mx-auto w-full px-4 py-4 overflow-hidden">
         {page === 'home' && <Home setPage={setPage} />}
         {page === 'settings' && <Settings />}
         {page === 'history' && <History />}

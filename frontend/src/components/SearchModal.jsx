@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../services/api';
 
 const FIELD_OPTIONS = [
@@ -34,6 +34,12 @@ const SOURCE_OPTIONS = [
   { value: 'mathscinet', label: 'MathSciNet' },
 ];
 
+const SOURCE_ESTIMATED_TIME = {
+  arxiv: 15,
+  zbmath: 8,
+  mathscinet: 8,
+};
+
 export default function SearchModal({ onClose, onSearch }) {
   const [conditions, setConditions] = useState([
     { field: 'topic', match: 'fuzzy', value: '', logic: 'AND' },
@@ -43,7 +49,9 @@ export default function SearchModal({ onClose, onSearch }) {
   const [customDateTo, setCustomDateTo] = useState('');
   const [sources, setSources] = useState(['arxiv', 'zbmath', 'mathscinet']);
   const [subjectInfo, setSubjectInfo] = useState({ subjects: [], subfields: {} });
-  const [loading, setLoading] = useState(false);
+  const [searchPhase, setSearchPhase] = useState('idle'); // 'idle' | 'searching' | 'stopping'
+  const [progressMap, setProgressMap] = useState({});
+  const abortCtrlRef = useRef(null);
 
   useEffect(() => {
     api.getSubjects().then(setSubjectInfo).catch(() => {});
@@ -75,7 +83,22 @@ export default function SearchModal({ onClose, onSearch }) {
       alert('请至少选择一个数据源');
       return;
     }
-    setLoading(true);
+
+    const ctrl = new AbortController();
+    abortCtrlRef.current = ctrl;
+    setSearchPhase('searching');
+
+    // Initialize progress
+    const initialProgress = {};
+    sources.forEach((s) => {
+      initialProgress[s] = {
+        status: 'loading',
+        progress: 0,
+        estimatedTime: SOURCE_ESTIMATED_TIME[s] || 10,
+      };
+    });
+    setProgressMap(initialProgress);
+
     const payload = {
       conditions: conditions.filter((c) => c.value.trim() !== ''),
       date_preset: datePreset === 'custom' ? null : datePreset,
@@ -83,11 +106,34 @@ export default function SearchModal({ onClose, onSearch }) {
       date_to: datePreset === 'custom' ? customDateTo || null : null,
       sources,
     };
+
     try {
-      await onSearch(payload);
+      await onSearch(payload, {
+        onProgress: (source, info) => {
+          setProgressMap((prev) => ({ ...prev, [source]: info }));
+        },
+        onSourceComplete: (source, papers) => {
+          // Optional: could show per-source result count
+        },
+        signal: ctrl.signal,
+      });
       onClose();
+    } catch (e) {
+      if (e.name === 'AbortError' || ctrl.signal.aborted) {
+        // User stopped manually; don't show error
+      } else {
+        alert('搜索失败: ' + e.message);
+      }
     } finally {
-      setLoading(false);
+      setSearchPhase('idle');
+      abortCtrlRef.current = null;
+    }
+  };
+
+  const handleStop = () => {
+    if (abortCtrlRef.current) {
+      abortCtrlRef.current.abort();
+      setSearchPhase('stopping');
     }
   };
 
@@ -136,6 +182,8 @@ export default function SearchModal({ onClose, onSearch }) {
       />
     );
   };
+
+  const isSearching = searchPhase === 'searching' || searchPhase === 'stopping';
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
@@ -257,21 +305,71 @@ export default function SearchModal({ onClose, onSearch }) {
             </div>
           </div>
 
+          {/* Progress Panel */}
+          {isSearching && (
+            <div className="mb-6 border rounded-lg p-4 bg-gray-50">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">搜索进度</h3>
+              <div className="space-y-3">
+                {sources.map((src) => {
+                  const info = progressMap[src] || { status: 'loading', progress: 0, estimatedTime: SOURCE_ESTIMATED_TIME[src] || 10 };
+                  const label = SOURCE_OPTIONS.find((o) => o.value === src)?.label || src;
+                  const statusText =
+                    info.status === 'done'
+                      ? '已完成'
+                      : info.status === 'error'
+                      ? '出错'
+                      : info.status === 'stopped'
+                      ? '已停止'
+                      : `预计 ${info.estimatedTime} 秒`;
+                  return (
+                    <div key={src}>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="font-medium text-gray-700">{label}</span>
+                        <span className="text-gray-500">{statusText} · {Math.round(info.progress)}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full transition-all duration-300 ${
+                            info.status === 'error' ? 'bg-red-500' : info.status === 'done' ? 'bg-green-500' : 'bg-indigo-500'
+                          }`}
+                          style={{ width: `${info.progress}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {searchPhase === 'searching' && (
+                <button
+                  type="button"
+                  onClick={handleStop}
+                  className="mt-4 w-full px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 text-sm"
+                >
+                  停止搜索，查看已搜索的文献
+                </button>
+              )}
+              {searchPhase === 'stopping' && (
+                <p className="mt-4 text-center text-sm text-gray-500">正在停止搜索...</p>
+              )}
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2 border rounded-lg hover:bg-gray-50"
+              disabled={isSearching}
+              className="px-5 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50"
             >
               取消
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={isSearching}
               className="px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50"
             >
-              {loading ? '搜索中...' : '开始搜索'}
+              {isSearching ? '搜索中...' : '开始搜索'}
             </button>
           </div>
         </form>

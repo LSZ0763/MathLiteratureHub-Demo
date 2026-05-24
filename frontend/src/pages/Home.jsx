@@ -9,7 +9,6 @@ export default function Home() {
   const [showBriefing, setShowBriefing] = useState(false);
   const [papers, setPapers] = useState([]);
   const [originalPapers, setOriginalPapers] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [viewMode, setViewMode] = useState('home'); // 'home' | 'results'
   const [filterConditions, setFilterConditions] = useState([]);
@@ -21,22 +20,69 @@ export default function Home() {
     }).catch(() => {});
   }, []);
 
-  const handleSearch = async (payload) => {
-    setLoading(true);
+  const handleSearch = async (payload, callbacks = {}) => {
+    const { onProgress, onSourceComplete, signal } = callbacks;
     setMessage('');
-    try {
-      const data = await api.search(payload);
-      setPapers(data);
-      setOriginalPapers(data);
-      setFilterConditions([]);
-      setMessage(`搜索完成，共找到 ${data.length} 篇文献。`);
-      setViewMode('results');
-      setShowSearch(false);
-    } catch (e) {
-      setMessage('搜索失败: ' + e.message);
-    } finally {
-      setLoading(false);
-    }
+
+    const sources = payload.sources;
+    const allResults = [];
+
+    // Estimated search time per source (seconds)
+    const estimatedTimes = {
+      arxiv: 15,
+      zbmath: 8,
+      mathscinet: 8,
+    };
+
+    const searchOneSource = async (source) => {
+      const singlePayload = { ...payload, sources: [source] };
+      const ctrl = new AbortController();
+
+      const onAbort = () => ctrl.abort();
+      signal?.addEventListener('abort', onAbort);
+
+      const startTime = Date.now();
+      const estimatedTime = estimatedTimes[source] || 10;
+
+      // Simulate progress updates
+      const progressTimer = setInterval(() => {
+        const elapsed = (Date.now() - startTime) / 1000;
+        const progress = Math.min(95, (elapsed / estimatedTime) * 100);
+        onProgress?.(source, { status: 'loading', progress, estimatedTime });
+      }, 500);
+
+      try {
+        const data = await api.search(singlePayload, ctrl.signal);
+        clearInterval(progressTimer);
+        onProgress?.(source, { status: 'done', progress: 100, estimatedTime });
+        onSourceComplete?.(source, data);
+        return data;
+      } catch (e) {
+        clearInterval(progressTimer);
+        if (e.name === 'AbortError' || ctrl.signal.aborted) {
+          onProgress?.(source, { status: 'stopped', progress: 0, estimatedTime });
+          return [];
+        }
+        onProgress?.(source, { status: 'error', progress: 0, estimatedTime, error: e.message });
+        return [];
+      } finally {
+        signal?.removeEventListener('abort', onAbort);
+      }
+    };
+
+    const promises = sources.map((source) => searchOneSource(source));
+    const resultsArray = await Promise.all(promises);
+
+    resultsArray.forEach((data) => allResults.push(...data));
+
+    setPapers(allResults);
+    setOriginalPapers(allResults);
+    setFilterConditions([]);
+    setMessage(`搜索完成，共找到 ${allResults.length} 篇文献。`);
+    setViewMode('results');
+    setShowSearch(false);
+
+    return allResults;
   };
 
   const handleFilterApply = async (conditions) => {
@@ -55,7 +101,6 @@ export default function Home() {
   };
 
   const handleSearchAuthor = async (authorName) => {
-    setLoading(true);
     setMessage('');
     try {
       const payload = {
@@ -73,8 +118,6 @@ export default function Home() {
       setViewMode('results');
     } catch (e) {
       setMessage('搜索失败: ' + e.message);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -91,9 +134,9 @@ export default function Home() {
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col overflow-hidden">
       {viewMode === 'home' && (
-        <div className="flex-1 flex flex-col items-center justify-center">
+        <div className="flex-1 flex flex-col items-center justify-center overflow-auto">
           <div className="text-center py-10">
             <h1 className="text-3xl font-extrabold text-gray-900">科研文献智能搜索</h1>
             <p className="text-gray-500 mt-2">支持 arXiv、zbMATH、MathSciNet 多源高级检索</p>
@@ -131,20 +174,22 @@ export default function Home() {
       )}
 
       {viewMode === 'results' && (
-        <div className="flex-1 flex flex-col min-h-0" style={{ height: 'calc(100vh - 120px)' }}>
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           {message && (
-            <div className="mb-3 p-2 bg-blue-50 text-blue-800 rounded-lg text-sm">
+            <div className="mb-3 p-2 bg-blue-50 text-blue-800 rounded-lg text-sm flex-shrink-0">
               {message}
             </div>
           )}
-          <SearchResultsView
-            papers={papers}
-            onBack={() => setViewMode('home')}
-            onGenerateBriefing={handleGenerateBriefing}
-            onSearchAuthor={handleSearchAuthor}
-            onFilterApply={handleFilterApply}
-            filterConditions={filterConditions}
-          />
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <SearchResultsView
+              papers={papers}
+              onBack={() => setViewMode('home')}
+              onGenerateBriefing={handleGenerateBriefing}
+              onSearchAuthor={handleSearchAuthor}
+              onFilterApply={handleFilterApply}
+              filterConditions={filterConditions}
+            />
+          </div>
         </div>
       )}
 
@@ -158,14 +203,6 @@ export default function Home() {
           onClose={() => setShowBriefing(false)}
           onComplete={handleBriefingComplete}
         />
-      )}
-
-      {loading && (
-        <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-40">
-          <div className="bg-white rounded-xl shadow-lg px-6 py-4 text-gray-700">
-            加载中...
-          </div>
-        </div>
       )}
     </div>
   );

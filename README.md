@@ -15,7 +15,7 @@
 
 ## 📖 项目简介
 
-**MathLiteratureHub** 是一款面向数学研究者（特别是动力系统方向）的文献智能搜索与总结工具。它能够从多个学术数据源（arXiv、zbMATH、MathSciNet）自动检索最新文献，调用大语言模型生成结构化总结，并一键输出格式规范的 Word 综述简报。
+**MathLiteratureHub** 是一款面向数学研究者（特别是动力系统方向）的文献搜索与管理工具。它能够从多个学术数据源（arXiv、zbMATH、MathSciNet）自动检索最新文献，提供搜索结果展示、简报预览与生成，并支持自动执行任务，帮助用户高效追踪研究方向最新进展。
 
 无论你是想追踪某个细分方向的最新进展，还是需要为组会/报告快速整理文献综述，这个工具都能帮你省下大量时间。
 
@@ -23,11 +23,10 @@
 
 | 功能 | 说明 |
 |------|------|
-| 🔍 **多源文献搜索** | 同时检索 arXiv、zbMATH、MathSciNet，支持关键词、作者、时间范围筛选 |
-| 🤖 **AI 智能总结** | 调用 LLM API 自动生成研究背景、方法、结论等结构化摘要 |
-| 📄 **Word 简报生成** | 一键导出格式规范的 `.docx` 文献综述文件 |
-| 📊 **引用信息增强** | 自动补全引用次数、参考文献等元数据 |
-| ⚙️ **灵活配置** | 支持学科/子领域偏好设置、多厂商 LLM 切换、关键词过滤 |
+| 🔍 **文献搜索** | 同时检索 arXiv、zbMATH、MathSciNet，支持关键词、作者、时间范围筛选 |
+| 📋 **搜索结果展示** | 多维度展示搜索结果，支持排序、筛选与详情查看 |
+| 📄 **简报预览与生成** | 预览并一键导出格式规范的 `.docx` 文献综述文件 |
+| ⚙️ **自动执行任务** | 支持定时自动搜索、简报自动生成与邮件通知等自动化流程 |
 | 📚 **历史管理** | 自动保存搜索记录与简报，支持下载和删除 |
 
 ---
@@ -66,17 +65,11 @@ copy .env.example .env        # Windows
 cp .env.example .env          # macOS / Linux
 ```
 
-编辑 `.env` 文件，填入你的 **LLM API Key**（否则 AI 总结功能不可用）：
+编辑 `.env` 文件，按需调整配置（项目开箱即用，无需配置 LLM API）：
 
 ```env
 # 数据库（默认 SQLite，无需额外配置）
 DATABASE_URL=sqlite:///./data/math_literature.db
-
-# LLM 配置（必填）
-LLM_PROVIDER=kimi
-LLM_API_KEY=sk-your-api-key-here
-LLM_BASE_URL=https://api.moonshot.cn/v1
-LLM_MODEL=moonshot-v1-8k
 
 # arXiv 搜索上限
 ARXIV_MAX_RESULTS=50
@@ -89,7 +82,7 @@ SMTP_PASSWORD=
 FROM_EMAIL=
 ```
 
-> ⚠️ **重要**：`.env` 文件已加入 `.gitignore`，**请勿将其提交到 Git 仓库**，以免泄露 API 密钥等敏感信息。
+> ⚠️ **重要**：`.env` 文件已加入 `.gitignore`，**请勿将其提交到 Git 仓库**，以免泄露敏感信息。
 
 启动后端服务：
 
