@@ -136,39 +136,63 @@ export default function Home() {
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {viewMode === 'home' && (
-        <div className="flex-1 flex flex-col items-center justify-center overflow-auto">
-          <div className="text-center py-10">
-            <h1 className="text-3xl font-extrabold text-gray-900">科研文献智能搜索</h1>
-            <p className="text-gray-500 mt-2">支持 arXiv、zbMATH、MathSciNet 多源高级检索</p>
-            <div className="mt-6 flex justify-center gap-4">
+        <div className="flex-1 flex flex-col items-center justify-center overflow-hidden">
+          <div className="text-center">
+            <h1 className="text-3xl font-extrabold text-gray-900">个性化科研助手</h1>
+            <p className="text-gray-500 mt-1 text-sm">支持 arXiv、zbMATH、MathSciNet 多源高级检索</p>
+            <div className="mt-4">
               <button
                 onClick={() => setShowSearch(true)}
-                className="px-6 py-3 bg-indigo-600 text-white rounded-xl shadow hover:bg-indigo-700 transition"
+                className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl shadow hover:bg-indigo-700 transition text-sm"
               >
                 🔍 搜索最新文献
-              </button>
-              <button
-                onClick={handleGenerateBriefing}
-                className="px-6 py-3 bg-amber-600 text-white rounded-xl shadow hover:bg-amber-700 transition"
-              >
-                📄 生成简报
               </button>
             </div>
           </div>
 
-          {message && (
-            <div className="mb-4 p-3 bg-blue-50 text-blue-800 rounded-lg text-sm max-w-xl w-full mx-4">
-              {message}
+          {papers.length > 0 && (
+            <div className="mt-3">
+              <button
+                onClick={() => setViewMode('results')}
+                className="text-sm text-indigo-600 hover:underline"
+              >
+                查看上次搜索结果（{papers.length} 篇）→
+              </button>
             </div>
           )}
 
-          {papers.length > 0 && (
-            <button
-              onClick={() => setViewMode('results')}
-              className="text-sm text-indigo-600 hover:underline mt-4"
-            >
-              查看上次搜索结果（{papers.length} 篇）→
-            </button>
+          {/* Feature showcase */}
+          <div className="mt-6 w-full max-w-3xl px-4">
+            <div className="bg-white/80 backdrop-blur rounded-2xl border border-gray-200 shadow-sm px-5 py-4">
+              <h3 className="text-center text-sm font-bold text-gray-700 mb-3 tracking-wide">
+                它能帮你做什么？
+              </h3>
+              <div className="flex flex-wrap justify-center gap-2">
+                {[
+                  { icon: '📰', label: '轻松获取近期科研进展' },
+                  { icon: '🗺️', label: '快速了解新领域科研图景' },
+                  { icon: '📄', label: '生成科研简报' },
+                  { icon: '📚', label: '帮助整理文献综述' },
+                  { icon: '🔗', label: '分析文献之间的关联' },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="flex items-center gap-2 bg-gray-50 hover:bg-indigo-50 border border-gray-100 hover:border-indigo-200 rounded-xl px-3 py-2 transition cursor-default"
+                  >
+                    <span className="text-lg">{item.icon}</span>
+                    <span className="text-xs font-medium text-gray-700 whitespace-nowrap">
+                      {item.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {message && (
+            <div className="mt-3 p-2 bg-blue-50 text-blue-800 rounded-lg text-xs max-w-xl w-full mx-4">
+              {message}
+            </div>
           )}
         </div>
       )}

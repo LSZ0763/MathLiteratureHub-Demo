@@ -10,7 +10,7 @@ function App() {
     <div className="min-h-screen flex flex-col bg-gray-50">
       <nav className="bg-indigo-600 text-white shadow">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <h1 className="text-lg font-bold">MathLiteratureHub</h1>
+          <h1 className="text-lg font-bold">个性化科研助手</h1>
           <div className="space-x-4 text-sm">
             <button onClick={() => setPage('home')} className={`${page==='home'?'underline':''} hover:opacity-80`}>首页</button>
             <button onClick={() => setPage('history')} className={`${page==='history'?'underline':''} hover:opacity-80`}>历史</button>
